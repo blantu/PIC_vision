@@ -2,6 +2,7 @@
 #define _INSTRUCTION
 
 #include <utility>
+#include "multplatform.hpp"
 
 class Direction
 {
@@ -18,6 +19,7 @@ public:
         _angle(angle), _distance(distance){};
 
     Direction ChangAxise();
+	void PrintXYZ() { std::cout << "direction:\nx£º" << _x << std::endl << "y£º" << _y << std::endl << "z£º" << _z << std::endl; };
 
     float _x,_y,_z;
     float _angle,_distance;
@@ -34,8 +36,14 @@ public:
 
     MoveInstruction(MODE mode = MANUAL):_mode(mode),_move_direction(*std::move(new Direction())){};
 
-    Direction GetDirection();
-    MODE GetMode();
+	void MoveTO(Direction d = *std::move(new Direction())) { _move_direction = d; };
+	bool ChangeMode(MODE mode = AUTO) {
+		_mode = mode; 
+		return true;
+	}
+
+	Direction GetDirection() { return _move_direction; };
+	MODE GetMode() { return _mode; };
 
 private:
 	Direction _move_direction;
