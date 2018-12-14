@@ -1,6 +1,7 @@
 #ifndef _PLANNING
 #define _PLANNING
 #include "instruction.hpp"
+#include "zedtools.hpp"
 
 class Planning
 {

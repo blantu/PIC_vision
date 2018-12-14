@@ -10,6 +10,7 @@ int main()
 
 	while (true)
 	{
+		//get instruction per 0.5s
 		sleep(500);
 		instruction = plan->GetMoveInstr();
 		if (instruction.GetMode() == instruction.AUTO)

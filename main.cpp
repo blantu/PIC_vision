@@ -1,22 +1,14 @@
 #include "instruction.hpp"
 #include "planning.hpp"
+#include "sensor.hpp"
 #include "multplatform.hpp"
+#include "opencv2/opencv.hpp"
 
-int main()
+int main(int argc, char** argv)
 {
-	MoveInstruction instruction;
-	Planning *plan = new Planning();
-	plan->Start();
-
-	while (true)
-	{
-		sleep(500);
-		instruction = plan->GetMoveInstr();
-		if (instruction.GetMode() == instruction.AUTO)
-			instruction.GetDirection().PrintXYZ();
-		else
-			std::cout << "MANUAL" << std::endl;
-	}
-	
+	Sensor sensor(argc, argv);
+	if (sensor.Start())
+		while (true);
+		
 	return 0;
 }
