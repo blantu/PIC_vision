@@ -17,14 +17,17 @@ public:
 
 private:
 	void GrabImage();
-	std::vector<cv::Rect> ImageAnalyse(cv::Mat&, cv::Mat&, sl::Mat&);
+	std::vector<cv::Rect> ImageAnalyse(cv::Mat&, cv::Mat&, cv::Mat&);
 
 	sl::Mat image_zed;
 	sl::Mat depth_image_zed;
-	sl::Mat point_cloud;
+	sl::Mat point_cloud_zed;
 		
 	cv::Mat image_ocv;
 	cv::Mat depth_image_ocv;
+	cv::Mat point_cloud_ocv;
+
+	cv::VideoWriter outputVideo;
 
 	sl::Camera zed;
 	sl::Resolution zed_image_size;

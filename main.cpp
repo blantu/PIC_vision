@@ -10,6 +10,7 @@ int main(int argc, char** argv)
 	if (sensor.Start())
 	{
 		sensor.SetColorRange(100, 124);
+		//sensor.SetColorRange(0,40);
 		sensor.SetDistanceRange(0.5, 10);
 		while (true);
 	}
