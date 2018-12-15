@@ -19,7 +19,7 @@ public:
         _angle(angle), _distance(distance){};
 
     Direction ChangAxise();
-	void PrintXYZ() { std::cout << "direction:\nx£º" << _x << std::endl << "y£º" << _y << std::endl << "z£º" << _z << std::endl; };
+	void PrintXYZ() { std::cout << "direction:\nx:" << _x << std::endl << "y:" << _y << std::endl << "z:" << _z << std::endl; };
 
     float _x,_y,_z;
     float _angle,_distance;

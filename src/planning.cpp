@@ -1,8 +1,6 @@
 #include "planning.hpp"
 #include "multplatform.hpp"
 
-
-
 void Planning::Plan()
 {
 	Direction target;

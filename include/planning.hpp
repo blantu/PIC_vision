@@ -2,11 +2,10 @@
 #define _PLANNING
 #include "instruction.hpp"
 
+//todo:thread safety
 class Planning
 {
 public:
-	//todo:thread safety
-
 	void Start() {
 		planning_thread = std::thread([this] { Plan(); });
 	};
