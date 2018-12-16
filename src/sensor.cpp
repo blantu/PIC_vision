@@ -1,17 +1,9 @@
 #include "sensor.hpp"
 #include "zedtools.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/photo/cuda.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/videoio.hpp"
-#include <algorithm>
-#include <string>
-#include <iomanip> 
-#include <sstream> 
-
+#include "planning.hpp"
+#include "includes.hpp"
 
 using namespace sl;
-
 void printHelp();
 
 Sensor::Sensor(int argc, char **argv)
@@ -21,11 +13,9 @@ Sensor::Sensor(int argc, char **argv)
 	zed_init_params.coordinate_units = UNIT_METER;
 	if (argc > 1)
 		zed_init_params.svo_input_filename.set(argv[1]);
-	
-
 }
 
-bool Sensor::Start()
+bool Sensor::Start(ReSize size, CalcMode mode)
 {
 	zed_error = zed.open(zed_init_params);
 	
@@ -35,17 +25,53 @@ bool Sensor::Start()
 		return false; // Quit if an error occurred
 	}
 
-	zed_image_size.height = zed.getResolution().height / 2;
-	zed_image_size.width = zed.getResolution().width / 2;
+	zed_image_size.height = zed.getResolution().height / size;
+	zed_image_size.width = zed.getResolution().width / size;
+	zed_fps = zed.getCameraFPS();
 
-
-	//outputVideo.open("./record.mp4", -1, 30, cv::Size(zed_image_size.width, zed_image_size.height), true);
+	if (_record)
+	{
+		if (outputVideo.open("./record.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), zed_fps, cv::Size(zed_image_size.width, zed_image_size.height), true) == false)
+			std::cout << "video output failed" << std::endl;
+		else
+			std::cout << "recording..." << std::endl;
+	}
 
 	zed_grab_thread = std::thread([this] { GrabImage(); });
+	obj_get_thread = std::thread([this, mode]() {CheckObj(mode); });
 
 	printHelp();
-	
+
 	return true;
+}
+
+void Sensor::CheckObj(CalcMode mode)
+{
+	int error_counts = 0;
+	while (true)
+	{
+		static std::vector<Obstacle> obstacle_objs_old;
+		std::unique_lock<std::mutex> lock(mutex_img);
+		auto wait = cond_img.wait_for(
+			lock,
+			std::chrono::milliseconds(REFESH_GAP));
+
+		if (wait == std::cv_status::timeout)
+		{
+			++error_counts;
+			obstacle_objs = obstacle_objs_old;
+		}
+		else
+		{
+			error_counts = 0;
+			obstacle_objs = DistanceCalc(image_bw_ocv, point_cloud_ocv, mode);
+		}
+
+		if (error_counts >= IMG_MAX_ERROR)
+			break;
+
+		obstacle_objs_old = obstacle_objs;
+	}
 }
 
 void Sensor::GrabImage()
@@ -65,8 +91,16 @@ void Sensor::GrabImage()
 
 	while (true) 
 	{
-		if (zed.grab(runtime_parameters) == SUCCESS) {
+		if (_grab_error_counts >= IMG_MAX_ERROR)
+		{
+			zed.close();
+			break;
+		}
 
+		if (zed.grab(runtime_parameters) == SUCCESS) {
+			_grab_error_counts = _grab_error_counts >= IMG_MAX_ERROR ? IMG_MAX_ERROR : 0;
+
+			std::lock_guard<std::mutex> lock(mutex_img);
 			// Retrieve the left image, depth image in half-resolution
 			zed.retrieveImage(image_zed, VIEW_LEFT, MEM_CPU, zed_image_size.width, zed_image_size.height);
 			zed.retrieveMeasure(depth_image_zed, MEASURE_DEPTH, MEM_CPU, zed_image_size.width, zed_image_size.height);
@@ -75,99 +109,193 @@ void Sensor::GrabImage()
 			// To learn how to manipulate and display point clouds, see Depth Sensing sample
 			zed.retrieveMeasure(point_cloud_zed, MEASURE_XYZ, MEM_CPU, zed_image_size.width, zed_image_size.height);
 
-			// Display image and depth using cv:Mat which share sl:Mat data
-			//cv::imshow("Image", image_ocv);
-			//cv::imshow("Depth", depth_image_ocv);
-			//std::cout << depth_image_ocv.at<float>(360, 360) << std::endl;
+			image_bw_ocv = ImageAnalyse(image_ocv, depth_image_ocv);
 
-			//cv::waitKey(1);
-			ImageAnalyse(image_ocv, depth_image_ocv, point_cloud_ocv);
+			cond_img.notify_one();
 		}
+		else { ++_grab_error_counts; }
 	}
 }
 
-std::vector<cv::Rect> Sensor::ImageAnalyse(cv::Mat& color, cv::Mat& depth, cv::Mat& cloud)
+cv::Mat Sensor::ImageAnalyse(cv::Mat& color, cv::Mat& depth)
 {
-	std::vector<cv::Rect> ROI;
-	std::vector<std::vector<cv::Point> > contours;
 	cv::Mat img_hsv, img_color_bw, img_depth_bw, img_dst_bw;
 
+	//change image into hsv mode
 	cvtColor(color, img_hsv, CV_BGR2HSV);
+	//set ROI range, color and depth
 	cv::inRange(img_hsv, cv::Scalar(_h_low, 43, 46), cv::Scalar(_h_high, 255, 255), img_color_bw); //Threshold the image
 	cv::inRange(depth, cv::Scalar(_d_low), cv::Scalar(_d_high), img_depth_bw); //Threshold the image
+	//"and" ROI regions
 	cv::bitwise_and(img_color_bw, img_depth_bw, img_dst_bw);
-
+	//morphology "close"
 	cv::morphologyEx(img_dst_bw, img_dst_bw, cv::MORPH_CLOSE, cv::Mat());
-
-	//cv::fastNlMeansDenoising(img_dst_bw, img_dst_bw, 3, 7, 21);
-	cv::findContours(img_dst_bw, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 	
-	//return all
-	//for (auto contour : contours)
-	//{
-	//	ROI.push_back(cv::boundingRect(contour));
-	//	if(ROI.back().height >= zed_image_size.height/10)
-	//		cv::rectangle(color, ROI.back(), cv::Scalar(0,255,0));
-	//}
-	//return the biggest
+	return img_dst_bw;
+}
+
+std::vector<Obstacle> Sensor::DistanceCalc(cv::Mat& mask, cv::Mat& cloud, CalcMode mode)
+{
+	std::vector<Obstacle> obs;
+
+	std::vector<cv::Rect> ROI;
+	std::vector<std::vector<cv::Point> > contours;
+
+	//find contours
+	cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+	//input rcts into vector ROI
 	for (auto contour : contours)
 	{
 		auto rct = cv::boundingRect(contour);
-		if (ROI.empty())
+		if (rct.area() > _min_rct.area())
 			ROI.push_back(rct);
-		else if (ROI.back().height * ROI.back().width < rct.width * rct.height)
-			ROI[0] = rct;
 	}
 
 	if (!ROI.empty())
 	{
-		cv::Point3f avr_pos;
-		cv::Vec4f real_pos = 0;
-		cv::Point pixel;
-		int point_count = 1;
-		
-		pixel.x = ROI.back().x, pixel.y = ROI.back().y;
-
-		for (; pixel.x < ROI.back().x + ROI.back().width; ++pixel.x)
+		//sort ROI from big to small
+		std::sort(ROI.begin(), ROI.end(),
+			[](const cv::Rect &a, const cv::Rect &b) -> bool
 		{
-			for (; pixel.y < ROI.back().y + ROI.back().height; ++pixel.y)
+			return a.area() > b.area();
+		});
+
+		switch (mode)
+		{
+		case Sensor::BIGGEST:
+			if (ROI.size() > 1)
 			{
-				if (img_dst_bw.at<uchar>(pixel) == 0 && cloud.at<cv::Vec4f>(pixel)[2] > _d_low)
-				{
-					real_pos += cloud.at<cv::Vec4f>(pixel);
-					++point_count;
-				}
+				if (ROI[0].area() != ROI[1].area())
+					ROI.resize(1);
+				else
+					ROI.resize(2);
 			}
+			break;
+		case Sensor::BIGGEST2:
+			if (ROI.size() > 2)
+			{
+				if (ROI[2].area() != ROI[1].area())
+					ROI.resize(2);
+				else
+					ROI.resize(3);
+			}
+			break;
+		case Sensor::ALL:
+		default:
+			break;
 		}
 
-		avr_pos.x = real_pos[0] / point_count;
-		avr_pos.y = real_pos[1] / point_count;
-		avr_pos.z = real_pos[2] / point_count;
+		for (auto roi : ROI)
+		{
+			std::vector<cv::Vec4f> real_pos;
+			cv::Point pixel = roi.tl();
+			cv::Point3f m_avr_pos = 0;
+			cv::Point3f m_near_pos = cv::Point3f(0, 0, _d_high);
 
-		std::stringstream stream;
-		std::string pos_string = "x:";
-
-		stream << std::fixed << std::setprecision(2) << avr_pos.x << "m y:" << avr_pos.y << "m z:" << avr_pos.z << "m";
-		pos_string+=stream.str();
-
-		putText(color, "average position    " + pos_string, cv::Point(5, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0));
-		cv::rectangle(color, ROI.back(), cv::Scalar(0, 255, 0));
+			for (; pixel.x < roi.br().x; ++pixel.x)
+			{
+				for (; pixel.y < roi.br().y; ++pixel.y)
+				{
+					if (mask.at<uchar>(pixel) == 0 && cloud.at<cv::Vec4f>(pixel)[2] > _d_low)
+					{
+						auto point = cloud.at<cv::Vec4f>(pixel);
+						real_pos.emplace_back(point);
+						m_avr_pos.x += point[0];
+						m_avr_pos.y += point[1];
+						m_avr_pos.z += point[2];
+						if (point[3] < m_near_pos.z)
+						{
+							m_near_pos = cv::Point3f(point[0], point[1], point[2]);
+						}
+					}
+				}
+			}
+			int size = real_pos.size();
+			if (size > 0)
+			{
+				obs.push_back(Obstacle(
+					cv::Point3f(m_avr_pos.x / size, m_avr_pos.y / size, m_avr_pos.z / size),
+					m_near_pos,
+					roi));
+			}
+		}
 	}
-		
-	//cv::imshow("dst_bw", img_dst_bw);
-	cv::imshow("rct", color);
-	cv::waitKey(1);
-	//outputVideo << color;
+
+	return obs;
+}
+
+void Sensor::Display(cv::Mat& image, std::vector<std::string>& string, std::vector<cv::Rect>& ROIs)
+{
+	cv::Size resolution = image.size();
+
+	for (auto i = 0; i < string.size(); ++i)
+	{
+		putText(image, string[i], cv::Point(5, i*30+20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0));
+	}
 	
-	return ROI;
+	for (auto rct : ROIs)
+	{
+		cv::rectangle(image, rct, cv::Scalar(0, 255, 0));
+	}
+	
+	//cv::imshow("display", image);
+	
+	if (_record)
+	{
+		outputVideo << image;
+	}	
+}
+
+void Sensor::Display(cv::Mat& image, std::vector<std::string>& string, cv::Rect& ROI)
+{
+	std::vector<cv::Rect> roi;
+	roi.emplace_back(ROI);
+
+	Display(image, string, roi);
+}
+
+void Sensor::Display(cv::Mat& image, std::string& string, cv::Rect& ROI)
+{
+	std::vector<std::string> str;
+	std::vector<cv::Rect> roi;
+
+	str.emplace_back(string);
+	roi.emplace_back(ROI);
+
+	Display(image, str, roi);
+}
+
+void Sensor::Display(cv::Mat& image)
+{
+	Display(image, std::vector<std::string>(), std::vector<cv::Rect>());
+}
+
+void Sensor::Display()
+{
+	while (true)
+	{
+		if (!obstacle_objs.empty())
+			Display(image_ocv, obstacle_objs[0].ToString(), obstacle_objs[0].GetROI());
+		else
+			Display(image_ocv);
+
+		auto key = cv::waitKey(10);
+		if (key != -1)
+			break;
+	}
+}
+
+void Sensor::Stop()
+{
+	_grab_error_counts = IMG_MAX_ERROR;
+
+	if(zed_grab_thread.joinable())
+		zed_grab_thread.join();
+	if(obj_get_thread.joinable())
+		obj_get_thread.join();
 }
 
 void printHelp() {
-	std::cout << " Press 's' to save Side by side images" << std::endl;
-	std::cout << " Press 'p' to save Point Cloud" << std::endl;
-	std::cout << " Press 'd' to save Depth image" << std::endl;
-	std::cout << " Press 'm' to switch Point Cloud format" << std::endl;
-	std::cout << " Press 'n' to switch Depth format" << std::endl;
+	std::cout << "Welcome" << std::endl;
 }
-
-
