@@ -11,7 +11,7 @@ public:
 	cv::Point3f GetMin() { return _min_pos; }
 	cv::Rect GetROI() { return _region; }
 
-	std::vector<std::string> Obstacle::ToString();
+	std::vector<std::string> ToString();
 	std::string ToString(cv::Point3f &);
 	std::string ToString(cv::Rect &);
 	Obstacle operator =(const Obstacle& ob)

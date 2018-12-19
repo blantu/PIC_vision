@@ -47,7 +47,7 @@ private:
 	const int REFESH_GAP = 100;
 
 	void GrabImage();
-	void Sensor::CheckObj(CalcMode);
+	void CheckObj(CalcMode);
 
 	sl::Mat image_zed;
 	sl::Mat depth_image_zed;
@@ -79,7 +79,7 @@ private:
 	float _d_low = 0.5;
 	float _d_high = 10;
 	bool _record = false;
-	std::atomic_int _grab_error_counts = 0;
+	std::atomic_int _grab_error_counts;
 };
 
 
