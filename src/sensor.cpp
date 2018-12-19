@@ -190,7 +190,7 @@ std::vector<Obstacle> Sensor::DistanceCalc(cv::Mat& mask, cv::Mat& cloud, CalcMo
 		{
 			std::vector<cv::Vec4f> real_pos;
 			cv::Point pixel = roi.tl();
-			cv::Point3f m_avr_pos = 0;
+			cv::Point3f m_avr_pos = cv::Point3f(0, 0, 0);
 			cv::Point3f m_near_pos = cv::Point3f(0, 0, _d_high);
 
 			for (; pixel.x < roi.br().x; ++pixel.x)
@@ -268,7 +268,9 @@ void Sensor::Display(cv::Mat& image, std::string& string, cv::Rect& ROI)
 
 void Sensor::Display(cv::Mat& image)
 {
-	Display(image, std::vector<std::string>(), std::vector<cv::Rect>());
+	std::vector<std::string>() string;
+	std::vector<cv::Rect>() rect;
+	Display(image, string, rect);
 }
 
 void Sensor::Display()

@@ -6,7 +6,7 @@
 class Obstacle
 {
 public:
-	Obstacle(cv::Point3f &avr, cv::Point3f &min, cv::Rect region) :_avr_pos(avr),_min_pos(min),_region(region) {};
+	Obstacle(cv::Point3f &avr, cv::Point3f &min, cv::Rect &region) :_avr_pos(avr),_min_pos(min),_region(region) {};
 	cv::Point3f GetAverage() { return _avr_pos; }
 	cv::Point3f GetMin() { return _min_pos; }
 	cv::Rect GetROI() { return _region; }
