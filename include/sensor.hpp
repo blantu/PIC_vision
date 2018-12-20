@@ -10,11 +10,15 @@ class Sensor
 public:
 	enum CalcMode
 	{
+		// return the only biggest object
 		BIGGEST,
+		// return the only biggest two objects
 		BIGGEST2,
+		// return all objects
 		ALL,
 	};
 
+	//resize the image to process faster
 	enum ReSize
 	{
 		FULL=1,
@@ -24,23 +28,29 @@ public:
 	};
 
 	Sensor(int argc, char **argv);
+	//set color range, in hsv
 	void SetColorRange(int low=0, int high=360) { _h_low = low; _h_high = high; };
+	//set detect distance range, in meter
 	void SetDistanceRange(float low = 0.5, float high = 10) { _d_low = low; _d_high = high; };
+	//set minist ROI region, ignore the smaller region area
 	void SetMinROI(int width, int height) { _min_rct = cv::Size2i(width, height); };
 	void SetMinROI(cv::Size2i rct) { _min_rct = rct; };
+	//set record or not
 	void SetRecord(bool re = false) { _record = re; };
 
+	//start grabbing and analasis
 	bool Start(ReSize size = FULL, CalcMode mode = BIGGEST);
+	//stop all prcess
 	void Stop();
 
-	void Display(cv::Mat&, std::vector<std::string>&, std::vector<cv::Rect>&);
-	void Display(cv::Mat&, std::vector<std::string>&, cv::Rect&);
-	void Display(cv::Mat&, std::string&, cv::Rect&);
+	void Display(cv::Mat&, const std::vector<std::string>&, const std::vector<cv::Rect>&);
+	void Display(cv::Mat&, const std::vector<std::string>&, const cv::Rect&);
+	void Display(cv::Mat&, const std::string&, const cv::Rect&);
 	void Display(cv::Mat&);
 	void Display();
 
-	cv::Mat ImageAnalyse(cv::Mat&, cv::Mat&);
-	std::vector<Obstacle> DistanceCalc(cv::Mat&, cv::Mat&, CalcMode);
+	cv::Mat ImageAnalyse(const cv::Mat&, const cv::Mat&);
+	std::vector<Obstacle> DistanceCalc(const cv::Mat&, const cv::Mat&, CalcMode);
 
 private:
 	const int IMG_MAX_ERROR = 10;

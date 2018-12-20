@@ -225,7 +225,7 @@ std::vector<Obstacle> Sensor::DistanceCalc(cv::Mat& mask, cv::Mat& cloud, CalcMo
 	return obs;
 }
 
-void Sensor::Display(cv::Mat& image, std::vector<std::string>& string, std::vector<cv::Rect>& ROIs)
+void Sensor::Display(cv::Mat& image, const std::vector<std::string>& string, const std::vector<cv::Rect>& ROIs)
 {
 	cv::Size resolution = image.size();
 
@@ -239,7 +239,7 @@ void Sensor::Display(cv::Mat& image, std::vector<std::string>& string, std::vect
 		cv::rectangle(image, rct, cv::Scalar(0, 255, 0));
 	}
 	
-	//cv::imshow("display", image);
+	cv::imshow("display", image);
 	
 	if (_record)
 	{
@@ -247,7 +247,7 @@ void Sensor::Display(cv::Mat& image, std::vector<std::string>& string, std::vect
 	}	
 }
 
-void Sensor::Display(cv::Mat& image, std::vector<std::string>& string, cv::Rect& ROI)
+void Sensor::Display(cv::Mat& image, const std::vector<std::string>& string, const cv::Rect& ROI)
 {
 	std::vector<cv::Rect> roi;
 	roi.emplace_back(ROI);
@@ -255,7 +255,7 @@ void Sensor::Display(cv::Mat& image, std::vector<std::string>& string, cv::Rect&
 	Display(image, string, roi);
 }
 
-void Sensor::Display(cv::Mat& image, std::string& string, cv::Rect& ROI)
+void Sensor::Display(cv::Mat& image, const std::string& string, const cv::Rect& ROI)
 {
 	std::vector<std::string> str;
 	std::vector<cv::Rect> roi;
@@ -268,8 +268,8 @@ void Sensor::Display(cv::Mat& image, std::string& string, cv::Rect& ROI)
 
 void Sensor::Display(cv::Mat& image)
 {
-	std::vector<std::string>() string;
-	std::vector<cv::Rect>() rect;
+	std::vector<std::string> string;
+	std::vector<cv::Rect> rect;
 	Display(image, string, rect);
 }
 
