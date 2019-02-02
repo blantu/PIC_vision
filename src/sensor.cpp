@@ -117,7 +117,7 @@ void Sensor::GrabImage()
 	}
 }
 
-cv::Mat Sensor::ImageAnalyse(cv::Mat& color, cv::Mat& depth)
+cv::Mat Sensor::ImageAnalyse(const cv::Mat& color, const cv::Mat& depth)
 {
 	cv::Mat img_hsv, img_color_bw, img_depth_bw, img_dst_bw;
 
@@ -134,7 +134,7 @@ cv::Mat Sensor::ImageAnalyse(cv::Mat& color, cv::Mat& depth)
 	return img_dst_bw;
 }
 
-std::vector<Obstacle> Sensor::DistanceCalc(cv::Mat& mask, cv::Mat& cloud, CalcMode mode)
+std::vector<Obstacle> Sensor::DistanceCalc(const cv::Mat& mask, const cv::Mat& cloud, const CalcMode mode)
 {
 	std::vector<Obstacle> obs;
 
