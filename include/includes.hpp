@@ -21,7 +21,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
 
-#include "sl_zed/Camera.hpp"
+#include "sl/Camera.hpp"
 
 
 #if defined (WIN32) || defined (_WIN32) || defined (WIN64) || defined (_WIN64)
