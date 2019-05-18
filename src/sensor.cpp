@@ -117,7 +117,7 @@ void Sensor::GrabImage()
 	}
 }
 
-cv::Mat Sensor::ImageAnalyse(const cv::Mat& color, const cv::Mat& depth)
+cv::Mat Sensor::ImageAnalyse(const cv::Mat color, const cv::Mat depth)
 {
 	cv::Mat img_hsv, img_color_bw, img_depth_bw, img_dst_bw;
 
@@ -134,7 +134,7 @@ cv::Mat Sensor::ImageAnalyse(const cv::Mat& color, const cv::Mat& depth)
 	return img_dst_bw;
 }
 
-std::vector<Obstacle> Sensor::DistanceCalc(const cv::Mat& mask, const cv::Mat& cloud, const CalcMode mode)
+std::vector<Obstacle> Sensor::DistanceCalc(const cv::Mat mask, const cv::Mat cloud, const CalcMode mode)
 {
 	std::vector<Obstacle> obs;
 
@@ -225,7 +225,7 @@ std::vector<Obstacle> Sensor::DistanceCalc(const cv::Mat& mask, const cv::Mat& c
 	return obs;
 }
 
-void Sensor::Display(cv::Mat& image, const std::vector<std::string>& string, const std::vector<cv::Rect>& ROIs)
+void Sensor::Display(cv::Mat image, const std::vector<std::string> string, const std::vector<cv::Rect> ROIs)
 {
 	cv::Size resolution = image.size();
 
@@ -247,7 +247,7 @@ void Sensor::Display(cv::Mat& image, const std::vector<std::string>& string, con
 	}	
 }
 
-void Sensor::Display(cv::Mat& image, const std::vector<std::string>& string, const cv::Rect& ROI)
+void Sensor::Display(cv::Mat image, const std::vector<std::string> string, const cv::Rect ROI)
 {
 	std::vector<cv::Rect> roi;
 	roi.emplace_back(ROI);
@@ -255,7 +255,7 @@ void Sensor::Display(cv::Mat& image, const std::vector<std::string>& string, con
 	Display(image, string, roi);
 }
 
-void Sensor::Display(cv::Mat& image, const std::string& string, const cv::Rect& ROI)
+void Sensor::Display(cv::Mat image, const std::string string, const cv::Rect ROI)
 {
 	std::vector<std::string> str;
 	std::vector<cv::Rect> roi;
@@ -266,7 +266,7 @@ void Sensor::Display(cv::Mat& image, const std::string& string, const cv::Rect& 
 	Display(image, str, roi);
 }
 
-void Sensor::Display(cv::Mat& image)
+void Sensor::Display(cv::Mat image)
 {
 	std::vector<std::string> string;
 	std::vector<cv::Rect> rect;

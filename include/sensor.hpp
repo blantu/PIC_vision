@@ -43,14 +43,14 @@ public:
 	//stop all prcess
 	void Stop();
 
-	void Display(cv::Mat&, const std::vector<std::string>&, const std::vector<cv::Rect>&);
-	void Display(cv::Mat&, const std::vector<std::string>&, const cv::Rect&);
-	void Display(cv::Mat&, const std::string&, const cv::Rect&);
-	void Display(cv::Mat&);
+	void Display(cv::Mat, const std::vector<std::string>, const std::vector<cv::Rect>);
+	void Display(cv::Mat, const std::vector<std::string>, const cv::Rect);
+	void Display(cv::Mat, const std::string, const cv::Rect);
+	void Display(cv::Mat);
 	void Display();
 
-	cv::Mat ImageAnalyse(const cv::Mat&, const cv::Mat&);
-	std::vector<Obstacle> DistanceCalc(const cv::Mat&, const cv::Mat&, CalcMode);
+	cv::Mat ImageAnalyse(const cv::Mat, const cv::Mat);
+	std::vector<Obstacle> DistanceCalc(const cv::Mat, const cv::Mat, CalcMode);
 
 private:
 	const int IMG_MAX_ERROR = 10;
